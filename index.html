@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal de Faltas — Acesso</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-box">
+      <div class="auth-logo">
+        <h1>PF<span>//</span>Portal</h1>
+        <p>Sistema de Controle de Frequência</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Entrar</button>
+        <button class="auth-tab" id="tab-cadastro" onclick="switchTab('cadastro')">Cadastrar</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <div class="auth-form" id="form-login">
+        <div id="login-msg"></div>
+        <div class="form-group">
+          <label class="form-label">E-mail</label>
+          <input type="email" id="login-email" class="form-input" placeholder="seu@email.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input type="password" id="login-senha" class="form-input" placeholder="••••••" />
+        </div>
+        <button class="btn btn-primary btn-full btn-lg mt-2" onclick="doLogin()">Entrar no Portal</button>
+      </div>
+
+      <!-- CADASTRO FORM -->
+      <div class="auth-form hidden" id="form-cadastro">
+        <div id="cadastro-msg"></div>
+        <div class="form-group">
+          <label class="form-label">Nome completo</label>
+          <input type="text" id="cad-nome" class="form-input" placeholder="Seu nome" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-mail</label>
+          <input type="email" id="cad-email" class="form-input" placeholder="seu@email.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha (mín. 6 caracteres)</label>
+          <input type="password" id="cad-senha" class="form-input" placeholder="••••••" />
+        </div>
+        <button class="btn btn-primary btn-full btn-lg mt-2" onclick="doCadastro()">Criar Conta</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/storage.js"></script>
+  <script>
+    // Redirect if already logged in
+    if (Auth.getCurrentUser()) window.location.href = 'portal.html';
+
+    function switchTab(tab) {
+      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-cadastro').classList.toggle('active', tab === 'cadastro');
+      document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
+      document.getElementById('form-cadastro').classList.toggle('hidden', tab !== 'cadastro');
+    }
+
+    function showMsg(elId, msg, type) {
+      const el = document.getElementById(elId);
+      el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+      setTimeout(() => el.innerHTML = '', 4000);
+    }
+
+    function doLogin() {
+      const email = document.getElementById('login-email').value;
+      const senha = document.getElementById('login-senha').value;
+      const res = Auth.login(email, senha);
+      if (!res.ok) return showMsg('login-msg', res.msg, 'error');
+      window.location.href = 'portal.html';
+    }
+
+    function doCadastro() {
+      const nome = document.getElementById('cad-nome').value;
+      const email = document.getElementById('cad-email').value;
+      const senha = document.getElementById('cad-senha').value;
+      const res = Auth.register(nome, email, senha);
+      if (!res.ok) return showMsg('cadastro-msg', res.msg, 'error');
+      showMsg('cadastro-msg', 'Conta criada! Faça login.', 'success');
+      setTimeout(() => switchTab('login'), 1500);
+    }
+
+    // Enter key support
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const active = document.getElementById('form-login').classList.contains('hidden') ? 'cadastro' : 'login';
+        active === 'login' ? doLogin() : doCadastro();
+      }
+    });
+  </script>
+</body>
+</html>

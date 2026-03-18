@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a class="navbar-brand" href="portal.html">PF<span>//</span>Portal</a>
+    <div class="navbar-right">
+      <span class="welcome-text">Bem-vindo, <strong id="user-name">—</strong></span>
+      <button class="btn btn-ghost btn-sm" onclick="Auth.logout()">Sair</button>
+    </div>
+  </nav>
+
+  <div class="page container" style="padding-top:2rem; padding-bottom:3rem;">
+    <!-- Stats -->
+    <div class="stats-row" id="stats-row">
+      <div class="stat-box">
+        <div class="stat-label">Turmas</div>
+        <div class="stat-value font-mono" id="stat-turmas">0</div>
+        <div class="stat-sub">cadastradas</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Alunos</div>
+        <div class="stat-value font-mono" id="stat-alunos">0</div>
+        <div class="stat-sub">no total</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">UCs</div>
+        <div class="stat-value font-mono" id="stat-ucs">0</div>
+        <div class="stat-sub">cadastradas</div>
+      </div>
+    </div>
+
+    <!-- Section header -->
+    <div class="section-header">
+      <div>
+        <div class="section-title">Minhas Turmas</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal()">+ Criar Turma</button>
+    </div>
+
+    <div id="msg-area"></div>
+    <div id="turmas-grid" class="grid-2"></div>
+  </div>
+
+  <!-- Modal: criar/editar turma -->
+  <div class="modal-overlay hidden" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="modal-title">Nova Turma</span>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div id="modal-msg"></div>
+      <div class="form-group">
+        <label class="form-label">Nome da Turma *</label>
+        <input type="text" id="turma-nome" class="form-input" placeholder="Ex: Turma 2024/1" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição (opcional)</label>
+        <input type="text" id="turma-desc" class="form-input" placeholder="Ex: Técnico em Informática" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" id="modal-save-btn" onclick="salvarTurma()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: confirmar delete -->
+  <div class="modal-overlay hidden" id="modal-del">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Excluir Turma</span>
+        <button class="modal-close" onclick="document.getElementById('modal-del').classList.add('hidden')">✕</button>
+      </div>
+      <p class="text-muted">Tem certeza? Todos os alunos, UCs e frequências desta turma serão excluídos.</p>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="document.getElementById('modal-del').classList.add('hidden')">Cancelar</button>
+        <button class="btn btn-danger" id="btn-confirm-del" onclick="confirmarDelete()">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/turmas.js"></script>
+  <script>
+    const user = Auth.requireAuth();
+    if (user) document.getElementById('user-name').textContent = user.name.split(' ')[0];
+
+    let editingId = null;
+    let deletingId = null;
+
+    function openModal(turma) {
+      editingId = turma ? turma.id : null;
+      document.getElementById('modal-title').textContent = turma ? 'Editar Turma' : 'Nova Turma';
+      document.getElementById('turma-nome').value = turma ? turma.nome : '';
+      document.getElementById('turma-desc').value = turma ? turma.descricao : '';
+      document.getElementById('modal-msg').innerHTML = '';
+      document.getElementById('modal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('turma-nome').focus(), 100);
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
+
+    function salvarTurma() {
+      const nome = document.getElementById('turma-nome').value;
+      const desc = document.getElementById('turma-desc').value;
+      let res;
+      if (editingId) {
+        res = Turmas.update(editingId, nome, desc);
+      } else {
+        res = Turmas.create(user.id, nome, desc);
+      }
+      if (!res.ok) {
+        document.getElementById('modal-msg').innerHTML = `<div class="alert alert-error">${res.msg}</div>`;
+        return;
+      }
+      closeModal();
+      render();
+    }
+
+    function openDelete(id) {
+      deletingId = id;
+      document.getElementById('modal-del').classList.remove('hidden');
+    }
+
+    function confirmarDelete() {
+      if (!deletingId) return;
+      Turmas.delete(deletingId);
+      deletingId = null;
+      document.getElementById('modal-del').classList.add('hidden');
+      render();
+    }
+
+    function render() {
+      const turmas = Storage.getTurmas(user.id);
+      const grid = document.getElementById('turmas-grid');
+
+      // Stats
+      let totalAlunos = 0, totalUCs = 0;
+      turmas.forEach(t => {
+        totalAlunos += Storage.getAlunos(t.id).length;
+        totalUCs += Storage.getUCs(t.id).length;
+      });
+      document.getElementById('stat-turmas').textContent = turmas.length;
+      document.getElementById('stat-alunos').textContent = totalAlunos;
+      document.getElementById('stat-ucs').textContent = totalUCs;
+
+      if (turmas.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1">
+            <div class="empty-icon">🏫</div>
+            <h3>Nenhuma turma cadastrada</h3>
+            <p>Clique em "Criar Turma" para começar.</p>
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = turmas.map(t => {
+        const alunos = Storage.getAlunos(t.id).length;
+        const ucs = Storage.getUCs(t.id).length;
+        return `
+          <div class="card card-clickable" onclick="location.href='turma.html?id=${t.id}'">
+            <div class="card-header">
+              <div>
+                <div class="card-title">${escHtml(t.nome)}</div>
+                ${t.descricao ? `<div class="card-subtitle">${escHtml(t.descricao)}</div>` : ''}
+              </div>
+              <div style="display:flex;gap:0.4rem;z-index:2" onclick="event.stopPropagation()">
+                <button class="btn btn-warn btn-sm" onclick="openModal(${JSON.stringify(t).replace(/"/g,'&quot;')})">✏</button>
+                <button class="btn btn-danger btn-sm" onclick="openDelete('${t.id}')">🗑</button>
+              </div>
+            </div>
+            <div style="display:flex;gap:0.75rem;margin-top:0.5rem;">
+              <span class="badge badge-accent">👥 ${alunos} aluno${alunos !== 1 ? 's' : ''}</span>
+              <span class="badge badge-muted">📚 ${ucs} UC${ucs !== 1 ? 's' : ''}</span>
+            </div>
+            <div style="margin-top:1rem;">
+              <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();location.href='turma.html?id=${t.id}'">Entrar →</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Allow Enter key in modal
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !document.getElementById('modal').classList.contains('hidden')) salvarTurma();
+      if (e.key === 'Escape') { closeModal(); document.getElementById('modal-del').classList.add('hidden'); }
+    });
+
+    render();
+  </script>
+</body>
+</html>

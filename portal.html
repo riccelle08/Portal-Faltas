@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PF//Portal — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* ===== PORTAL ESPECÍFICO ===== */
+ 
+    .portal-hero {
+      background: var(--primary);
+      border-bottom: 4px solid var(--accent);
+      padding: 2rem 0 0 0;
+      margin-bottom: 2rem;
+    }
+ 
+    .portal-hero-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem 1.5rem;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+ 
+    .portal-greeting {
+      color: rgba(255,255,255,0.7);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 0.3rem;
+    }
+ 
+    .portal-greeting strong {
+      color: #ffffff;
+      font-family: 'Merriweather', serif;
+      font-size: 1.5rem;
+      display: block;
+      text-transform: none;
+      letter-spacing: -0.3px;
+      margin-top: 0.1rem;
+    }
+ 
+    .portal-date {
+      color: rgba(255,255,255,0.5);
+      font-size: 0.78rem;
+      margin-top: 0.4rem;
+    }
+ 
+    /* Stats no hero */
+    .hero-stats {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+ 
+    .hero-stat {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      text-align: center;
+      min-width: 90px;
+    }
+ 
+    .hero-stat-value {
+      font-family: 'Merriweather', serif;
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--accent);
+      line-height: 1;
+    }
+ 
+    .hero-stat-label {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.65);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+      margin-top: 0.25rem;
+    }
+ 
+    /* ===== TURMA CARDS ===== */
+    .turma-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      display: flex;
+      flex-direction: column;
+    }
+ 
+    .turma-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--primary);
+    }
+ 
+    .turma-card-header {
+      background: var(--primary);
+      padding: 1.1rem 1.25rem;
+      border-bottom: 3px solid var(--accent);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+ 
+    .turma-card-titulo {
+      font-family: 'Merriweather', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.3;
+    }
+ 
+    .turma-card-desc {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.65);
+      margin-top: 0.2rem;
+    }
+ 
+    .turma-card-acoes {
+      display: flex;
+      gap: 0.35rem;
+      flex-shrink: 0;
+    }
+ 
+    .turma-card-body {
+      padding: 1rem 1.25rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+ 
+    .turma-info-row {
+      display: flex;
+      gap: 0.6rem;
+    }
+ 
+    .turma-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: var(--primary-bg);
+      color: var(--primary);
+      border: 1px solid #b3c8e8;
+      border-radius: 4px;
+      padding: 0.2rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+ 
+    .turma-card-footer {
+      padding: 0.85rem 1.25rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface2);
+    }
+ 
+    /* ===== MODAL OVERLAY CUSTOM ===== */
+    .modal > .form-group:first-of-type {
+      margin-top: 1.25rem;
+    }
+ 
+    /* ===== EMPTY ===== */
+    .empty-portal {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 4rem 2rem;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+    }
+ 
+    .empty-portal .empty-icon {
+      font-size: 3.5rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+ 
+    .empty-portal h3 {
+      font-family: 'Merriweather', serif;
+      font-size: 1.1rem;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+ 
+    .empty-portal p {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      margin-bottom: 1.5rem;
+    }
+ 
+    /* ===== SECTION TOOLBAR ===== */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+ 
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+ 
+    .toolbar-title {
+      font-family: 'Merriweather', serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+ 
+    .toolbar-count {
+      background: var(--primary-bg);
+      color: var(--primary);
+      border: 1px solid #b3c8e8;
+      border-radius: 99px;
+      padding: 0.15rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+ 
+    /* ===== ALERTA CONFIRMAÇÃO DELETE ===== */
+    .confirm-msg {
+      padding: 1rem 1.5rem;
+      background: var(--danger-bg);
+      border-left: 4px solid var(--danger);
+      color: var(--danger);
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin: 0 1.5rem;
+      border-radius: var(--radius);
+    }
+  </style>
+</head>
+<body>
+ 
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a class="navbar-brand" href="portal.html">PF<span>//</span>Portal</a>
+    <div class="navbar-right">
+      <span class="welcome-text" id="nav-user-text"></span>
+      <button class="btn btn-ghost btn-sm" onclick="Auth.logout()">⬅ Sair</button>
+    </div>
+  </nav>
+ 
+  <!-- HERO BANNER -->
+  <div class="portal-hero">
+    <div class="portal-hero-inner">
+      <div>
+        <div class="portal-greeting">
+          Bem-vindo de volta,
+          <strong id="hero-nome">—</strong>
+        </div>
+        <div class="portal-date" id="hero-data">—</div>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-value" id="stat-turmas">0</div>
+          <div class="hero-stat-label">Turmas</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value" id="stat-alunos">0</div>
+          <div class="hero-stat-label">Alunos</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value" id="stat-ucs">0</div>
+          <div class="hero-stat-label">UCs</div>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- CONTEÚDO PRINCIPAL -->
+  <div class="container" style="padding-bottom: 3rem;">
+ 
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <span class="toolbar-title">Minhas Turmas</span>
+        <span class="toolbar-count" id="turmas-count">0</span>
+      </div>
+      <button class="btn btn-primary" onclick="openModal()">
+        + Nova Turma
+      </button>
+    </div>
+ 
+    <div id="msg-area"></div>
+ 
+    <!-- Grid de turmas -->
+    <div class="grid-2" id="turmas-grid"></div>
+ 
+  </div>
+ 
+  <!-- ===== MODAL: CRIAR / EDITAR TURMA ===== -->
+  <div class="modal-overlay hidden" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="modal-title">Nova Turma</span>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div id="modal-msg" style="padding: 0 1.5rem;"></div>
+      <div class="form-group" style="padding: 1.25rem 1.5rem 0;">
+        <label class="form-label">Nome da Turma *</label>
+        <input type="text" id="turma-nome" class="form-input" placeholder="Ex: Turma 2024/1" />
+      </div>
+      <div class="form-group" style="padding: 0 1.5rem;">
+        <label class="form-label">Descrição (opcional)</label>
+        <input type="text" id="turma-desc" class="form-input" placeholder="Ex: Técnico em Informática — Manhã" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarTurma()">💾 Salvar</button>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ===== MODAL: CONFIRMAR DELETE ===== -->
+  <div class="modal-overlay hidden" id="modal-del">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Excluir Turma</span>
+        <button class="modal-close" onclick="closeDelModal()">✕</button>
+      </div>
+      <p class="confirm-msg" style="margin-top: 1.25rem;">
+        ⚠ Tem certeza? Todos os alunos, UCs e frequências desta turma serão <strong>permanentemente excluídos</strong>.
+      </p>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeDelModal()">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmarDelete()">🗑 Excluir</button>
+      </div>
+    </div>
+  </div>
+ 
+  <script src="js/auth.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/turmas.js"></script>
+  <script>
+    // ===== INIT =====
+    const user = Auth.requireAuth();
+    if (user) {
+      document.getElementById('hero-nome').textContent = user.name;
+      document.getElementById('nav-user-text').innerHTML = `<strong>${user.name.split(' ')[0]}</strong>`;
+ 
+      // Data atual em pt-BR
+      const hoje = new Date();
+      document.getElementById('hero-data').textContent = hoje.toLocaleDateString('pt-BR', {
+        weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+      });
+    }
+ 
+    let editingId  = null;
+    let deletingId = null;
+ 
+    // ===== MODAL TURMA =====
+    function openModal(turma) {
+      editingId = turma ? turma.id : null;
+      document.getElementById('modal-title').textContent = turma ? 'Editar Turma' : 'Nova Turma';
+      document.getElementById('turma-nome').value = turma ? turma.nome : '';
+      document.getElementById('turma-desc').value = turma ? turma.descricao : '';
+      document.getElementById('modal-msg').innerHTML = '';
+      document.getElementById('modal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('turma-nome').focus(), 100);
+    }
+ 
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+    }
+ 
+    function salvarTurma() {
+      const nome = document.getElementById('turma-nome').value;
+      const desc = document.getElementById('turma-desc').value;
+      const res = editingId
+        ? Turmas.update(editingId, nome, desc)
+        : Turmas.create(user.id, nome, desc);
+ 
+      if (!res.ok) {
+        document.getElementById('modal-msg').innerHTML =
+          `<div class="alert alert-error" style="margin-top:0.75rem;">⚠ ${res.msg}</div>`;
+        return;
+      }
+      closeModal();
+      render();
+    }
+ 
+    // ===== MODAL DELETE =====
+    function openDelModal(id) {
+      deletingId = id;
+      document.getElementById('modal-del').classList.remove('hidden');
+    }
+ 
+    function closeDelModal() {
+      document.getElementById('modal-del').classList.add('hidden');
+      deletingId = null;
+    }
+ 
+    function confirmarDelete() {
+      if (!deletingId) return;
+      Turmas.delete(deletingId);
+      deletingId = null;
+      closeDelModal();
+      render();
+    }
+ 
+    // ===== RENDER =====
+    function render() {
+      const turmas = Storage.getTurmas(user.id);
+      const grid   = document.getElementById('turmas-grid');
+ 
+      // Stats
+      let totalAlunos = 0, totalUCs = 0;
+      turmas.forEach(t => {
+        totalAlunos += Storage.getAlunos(t.id).length;
+        totalUCs    += Storage.getUCs(t.id).length;
+      });
+ 
+      document.getElementById('stat-turmas').textContent = turmas.length;
+      document.getElementById('stat-alunos').textContent = totalAlunos;
+      document.getElementById('stat-ucs').textContent    = totalUCs;
+      document.getElementById('turmas-count').textContent = turmas.length;
+ 
+      if (turmas.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-portal">
+            <span class="empty-icon">🏫</span>
+            <h3>Nenhuma turma cadastrada ainda</h3>
+            <p>Crie sua primeira turma para começar a registrar frequências.</p>
+            <button class="btn btn-primary" onclick="openModal()">+ Criar Primeira Turma</button>
+          </div>`;
+        return;
+      }
+ 
+      grid.innerHTML = turmas.map(t => {
+        const alunos = Storage.getAlunos(t.id).length;
+        const ucs    = Storage.getUCs(t.id).length;
+        const aulas  = ucs > 0
+          ? Storage.getUCs(t.id).reduce((acc, uc) => acc + Storage.getAulas(uc.id).length, 0)
+          : 0;
+ 
+        const turmaJson = escAttr(JSON.stringify(t));
+ 
+        return `
+          <div class="turma-card" onclick="location.href='turma.html?id=${t.id}'">
+            <div class="turma-card-header">
+              <div>
+                <div class="turma-card-titulo">${escHtml(t.nome)}</div>
+                ${t.descricao ? `<div class="turma-card-desc">${escHtml(t.descricao)}</div>` : ''}
+              </div>
+              <div class="turma-card-acoes" onclick="event.stopPropagation()">
+                <button class="btn btn-sm"
+                  style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);"
+                  onclick="openModal(${turmaJson})"
+                  title="Editar turma">✏</button>
+                <button class="btn btn-sm"
+                  style="background:rgba(185,28,28,0.4);color:#fca5a5;border:1px solid rgba(185,28,28,0.5);"
+                  onclick="openDelModal('${t.id}')"
+                  title="Excluir turma">🗑</button>
+              </div>
+            </div>
+ 
+            <div class="turma-card-body">
+              <div class="turma-info-row">
+                <span class="turma-chip">👥 ${alunos} aluno${alunos !== 1 ? 's' : ''}</span>
+                <span class="turma-chip">📚 ${ucs} UC${ucs !== 1 ? 's' : ''}</span>
+                <span class="turma-chip">📋 ${aulas} aula${aulas !== 1 ? 's' : ''}</span>
+              </div>
+            </div>
+ 
+            <div class="turma-card-footer">
+              <button class="btn btn-primary btn-sm"
+                onclick="event.stopPropagation(); location.href='turma.html?id=${t.id}'">
+                Acessar Turma →
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+ 
+    // ===== UTILS =====
+    function escHtml(s) {
+      return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+ 
+    function escAttr(s) {
+      return String(s).replace(/"/g, '&quot;');
+    }
+ 
+    // ===== TECLADO =====
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !document.getElementById('modal').classList.contains('hidden'))
+        salvarTurma();
+      if (e.key === 'Escape') { closeModal(); closeDelModal(); }
+    });
+ 
+    render();
+  </script>
+</body>
+</html>

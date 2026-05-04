@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Frequência — UC</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <a class="navbar-brand" href="portal.html">PF<span>//</span>Portal</a>
+    <div class="navbar-right">
+      <span class="welcome-text" id="nav-user"></span>
+      <button class="btn btn-ghost btn-sm" onclick="Auth.logout()">Sair</button>
+    </div>
+  </nav>
+ 
+  <div class="page container" style="padding-top:1.5rem;padding-bottom:3rem;">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <a href="portal.html">Portal</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="#" id="bc-turma-link">Turma</a>
+      <span class="breadcrumb-sep">/</span>
+      <span id="bc-uc">UC</span>
+    </div>
+ 
+    <!-- Header -->
+    <div class="section-header" style="margin-bottom:1.5rem;">
+      <div>
+        <div class="section-title" id="uc-title">—</div>
+        <div class="text-muted" id="uc-meta"></div>
+      </div>
+      <button class="btn btn-primary" onclick="openNovaAula()">+ Nova Aula</button>
+    </div>
+ 
+    <!-- Stats -->
+    <div class="stats-row" id="stats-area"></div>
+ 
+    <!-- Alert legend -->
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+      <span class="badge badge-danger">⚠ 2 faltas consecutivas</span>
+      <span class="badge badge-warn">📉 Presença &lt; 40%</span>
+    </div>
+ 
+    <!-- Resumo por aluno -->
+    <div class="section-header" style="margin-bottom:1rem;padding-bottom:0.75rem;">
+      <div class="section-title" style="font-size:1rem;">Resumo por Aluno</div>
+    </div>
+    <div id="resumo-alunos" style="margin-bottom:2rem;"></div>
+ 
+    <!-- Aulas / Frequência -->
+    <div class="section-header" style="margin-bottom:1rem;padding-bottom:0.75rem;">
+      <div class="section-title" style="font-size:1rem;">Registro de Aulas</div>
+    </div>
+    <div id="aulas-container" class="freq-grid"></div>
+  </div>
+ 
+  <!-- Modal: Nova Aula -->
+  <div class="modal-overlay hidden" id="modal-aula">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Nova Aula</span>
+        <button class="modal-close" onclick="closeNovaAula()">✕</button>
+      </div>
+      <div id="aula-modal-msg"></div>
+      <div class="form-group">
+        <label class="form-label">Data da Aula *</label>
+        <input type="date" id="aula-data" class="form-input" />
+      </div>
+      <p class="text-muted" style="font-size:0.8rem;margin-top:0.5rem;">Todos os alunos começarão como <strong style="color:var(--success)">Presente</strong>. Marque as faltas após criar.</p>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeNovaAula()">Cancelar</button>
+        <button class="btn btn-primary" onclick="criarAula()">Criar Aula</button>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- Modal: confirmar delete aula -->
+  <div class="modal-overlay hidden" id="modal-del-aula">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Excluir Aula</span>
+        <button class="modal-close" onclick="closeDelAula()">✕</button>
+      </div>
+      <p class="text-muted">Excluir esta aula? Os registros de frequência desta aula serão perdidos.</p>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeDelAula()">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmarDelAula()">Excluir</button>
+      </div>
+    </div>
+  </div>
+ 
+  <script src="js/auth.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/frequencia.js"></script>
+  <script>
+    const user = Auth.requireAuth();
+    const params = new URLSearchParams(location.search);
+    const ucId = params.get('ucId');
+    const turmaId = params.get('turmaId');
+ 
+    let uc = null, turma = null;
+    let deletingAulaId = null;
+ 
+    function init() {
+      if (!ucId || !turmaId) return location.href = 'portal.html';
+      uc = Storage.getUCById(ucId);
+      turma = Storage.getTurmaById(turmaId);
+      if (!uc || !turma || turma.userId !== user.id) return location.href = 'portal.html';
+ 
+      document.getElementById('nav-user').innerHTML = `Bem-vindo, <strong>${user.name.split(' ')[0]}</strong>`;
+      document.getElementById('bc-turma-link').textContent = turma.nome;
+      document.getElementById('bc-turma-link').href = `turma.html?id=${turmaId}`;
+      document.getElementById('bc-uc').textContent = uc.nome;
+      document.getElementById('uc-title').textContent = uc.nome;
+      document.getElementById('uc-meta').textContent = `${uc.totalAulas} aulas planejadas`;
+ 
+      // default date = today
+      document.getElementById('aula-data').value = new Date().toISOString().split('T')[0];
+ 
+      render();
+    }
+ 
+    function render() {
+      renderStats();
+      renderResumoAlunos();
+      renderAulas();
+    }
+ 
+    function renderStats() {
+      const alunos = Storage.getAlunos(turmaId);
+      const aulas = Storage.getAulas(ucId);
+ 
+      // Overall alerts
+      let alertConsec = 0, alertBaixa = 0;
+      alunos.forEach(a => {
+        const s = Frequencia.statsAluno(a.id, ucId);
+        if (s && s.faltasConsecutivas) alertConsec++;
+        if (s && s.baixaPresenca) alertBaixa++;
+      });
+ 
+      document.getElementById('stats-area').innerHTML = `
+        <div class="stat-box">
+          <div class="stat-label">Aulas Lançadas</div>
+          <div class="stat-value font-mono">${aulas.length}</div>
+          <div class="stat-sub">de ${uc.totalAulas} planejadas</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Alunos</div>
+          <div class="stat-value font-mono">${alunos.length}</div>
+          <div class="stat-sub">matriculados</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">⚠ Consec.</div>
+          <div class="stat-value font-mono" style="color:var(--danger)">${alertConsec}</div>
+          <div class="stat-sub">2+ faltas seguidas</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">📉 Baixa</div>
+          <div class="stat-value font-mono" style="color:var(--warn)">${alertBaixa}</div>
+          <div class="stat-sub">presença &lt; 40%</div>
+        </div>`;
+    }
+ 
+    function renderResumoAlunos() {
+      const alunos = Storage.getAlunos(turmaId);
+      const el = document.getElementById('resumo-alunos');
+      if (alunos.length === 0) {
+        el.innerHTML = `<div class="empty-state"><div class="empty-icon">👤</div><h3>Nenhum aluno cadastrado</h3><p>Cadastre alunos na tela da turma antes de registrar frequência.</p></div>`;
+        return;
+      }
+      const aulas = Storage.getAulas(ucId);
+      if (aulas.length === 0) {
+        el.innerHTML = `<div class="alert alert-warn">Crie uma aula para ver o resumo de frequências.</div>`;
+        return;
+      }
+ 
+      el.innerHTML = `<div class="table-wrap"><table>
+        <thead><tr><th>Aluno</th><th>Matr.</th><th>Presenças</th><th>% Pres.</th><th>Alertas</th></tr></thead>
+        <tbody>
+          ${alunos.map(a => {
+            const s = Frequencia.statsAluno(a.id, ucId);
+            if (!s) return '';
+            const pct = s.percentualPresenca;
+            const barClass = pct >= 75 ? 'progress-good' : pct >= 40 ? 'progress-warn' : 'progress-bad';
+            const nameStyle = s.faltasConsecutivas ? 'color:var(--danger);font-weight:700;' : '';
+            const alerts = [];
+            if (s.faltasConsecutivas) alerts.push(`<span class="badge badge-danger">⚠ faltas consecutivas</span>`);
+            if (s.baixaPresenca) alerts.push(`<span class="badge badge-warn">📉 alerta de faltas</span>`);
+            return `<tr>
+              <td><span style="${nameStyle}">${escHtml(a.nome)}</span></td>
+              <td class="font-mono text-muted">${escHtml(a.matricula)}</td>
+              <td class="font-mono">${s.presencas} / ${s.aulasCom}</td>
+              <td>
+                <span class="font-mono" style="${pct < 40 ? 'color:var(--danger)' : pct < 75 ? 'color:var(--warn)' : 'color:var(--success)'}">${pct}%</span>
+                <div class="progress-wrap"><div class="progress-bar ${barClass}" style="width:${Math.min(pct,100)}%"></div></div>
+              </td>
+              <td style="display:flex;gap:0.3rem;flex-wrap:wrap;align-items:center;">${alerts.join('') || '<span class="text-muted" style="font-size:0.78rem">—</span>'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table></div>`;
+    }
+ 
+    function renderAulas() {
+      const alunos = Storage.getAlunos(turmaId);
+      const aulas = Storage.getAulas(ucId);
+      const el = document.getElementById('aulas-container');
+ 
+      if (aulas.length === 0) {
+        el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>Nenhuma aula lançada</h3><p>Clique em "+ Nova Aula" para começar.</p></div>`;
+        return;
+      }
+ 
+      el.innerHTML = aulas.map(aula => {
+        const presentes = alunos.filter(a => aula.frequencia[a.id] === true).length;
+        const faltaram = alunos.filter(a => aula.frequencia[a.id] === false).length;
+        const dataFmt = aula.data ? new Date(aula.data + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+ 
+        return `
+          <div class="freq-aula-card">
+            <div class="freq-aula-header">
+              <div>
+                <div class="freq-aula-title">Aula ${String(aula.numero).padStart(2,'0')}</div>
+                <div class="freq-aula-date">${dataFmt}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span class="badge badge-success">✔ ${presentes}</span>
+                <span class="badge badge-danger">✘ ${faltaram}</span>
+                <button class="btn btn-danger btn-sm" onclick="openDelAula('${aula.id}')">🗑</button>
+              </div>
+            </div>
+            <div class="freq-aluno-list">
+              ${alunos.length === 0 ? '<p class="text-muted">Sem alunos cadastrados.</p>' :
+                alunos.map(a => {
+                  const presente = aula.frequencia[a.id] !== false; // default true
+                  return `
+                    <div class="freq-aluno-item">
+                      <span class="freq-aluno-name ${!presente ? 'faltou' : ''}">${escHtml(a.nome)}</span>
+                      <div class="freq-toggle">
+                        <button class="btn-presenca ${presente ? 'presente' : 'inativo'}"
+                          onclick="toggleFreq('${aula.id}','${a.id}',true)">✔ Presente</button>
+                        <button class="btn-presenca ${!presente ? 'faltou' : 'inativo'}"
+                          onclick="toggleFreq('${aula.id}','${a.id}',false)">✘ Faltou</button>
+                      </div>
+                    </div>`;
+                }).join('')}
+            </div>
+          </div>`;
+      }).join('');
+    }
+ 
+    function toggleFreq(aulaId, alunoId, presente) {
+      Frequencia.marcarFrequencia(aulaId, alunoId, presente);
+      render();
+    }
+ 
+    // ===== Modal: Nova Aula =====
+    function openNovaAula() {
+      const alunos = Storage.getAlunos(turmaId);
+      if (alunos.length === 0) {
+        alert('Cadastre alunos na turma antes de lançar frequência.');
+        return;
+      }
+      document.getElementById('aula-modal-msg').innerHTML = '';
+      document.getElementById('modal-aula').classList.remove('hidden');
+    }
+ 
+    function closeNovaAula() { document.getElementById('modal-aula').classList.add('hidden'); }
+ 
+    function criarAula() {
+      const data = document.getElementById('aula-data').value;
+      if (!data) {
+        document.getElementById('aula-modal-msg').innerHTML = `<div class="alert alert-error">Selecione uma data.</div>`;
+        return;
+      }
+      const res = Frequencia.criarAula(ucId, turmaId, data);
+      if (!res.ok) return;
+      closeNovaAula();
+      render();
+    }
+ 
+    // ===== Delete Aula =====
+    function openDelAula(id) {
+      deletingAulaId = id;
+      document.getElementById('modal-del-aula').classList.remove('hidden');
+    }
+ 
+    function closeDelAula() {
+      document.getElementById('modal-del-aula').classList.add('hidden');
+      deletingAulaId = null;
+    }
+ 
+    function confirmarDelAula() {
+      if (!deletingAulaId) return;
+      Storage.deleteAula(deletingAulaId);
+      // Renumber remaining aulas
+      const remaining = Storage.getAulas(ucId);
+      remaining.forEach((a, i) => { a.numero = i + 1; Storage.saveAula(a); });
+      closeDelAula();
+      render();
+    }
+ 
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+ 
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { closeNovaAula(); closeDelAula(); }
+    });
+ 
+    init();
+  </script>
+</body>
+</html>
+ 
